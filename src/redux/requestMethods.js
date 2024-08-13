@@ -1,7 +1,7 @@
 import axios from "axios";
 import store from "./store/store";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://classroom-backend-obd0.onrender.com";
 
 const publicRequest = axios.create({
   baseURL: BASE_URL,

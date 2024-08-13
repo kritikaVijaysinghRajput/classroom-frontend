@@ -8,9 +8,7 @@ Currently, two official plugins are available:
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
 
-kritikateacher@example.com - teacher123
-principal@classroom.com - Admin
-student1@classroom.com - studentpassword
+
 
 Front-end = npm run dev
 Back-end = npm start

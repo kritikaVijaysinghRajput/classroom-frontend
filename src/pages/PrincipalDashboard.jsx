@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaEdit, FaTrash, FaPlus, FaSignOutAlt } from "react-icons/fa";
+import { FaEdit, FaTrash, FaSignOutAlt } from "react-icons/fa";
 import { apiEndpoints } from "../constants/apiEndpoints";
 import { useNavigate } from "react-router-dom";
 import { privateRequest } from "../redux/requestMethods.js";
@@ -24,65 +24,26 @@ const PrincipalDashboard = () => {
   const [assignError, setAssignError] = useState("");
 
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const teachersResponse = await privateRequest.get(
-          apiEndpoints.TEACHERS
-        );
-        setTeachers(teachersResponse.data);
-
-        const studentsResponse = await privateRequest.get(
-          apiEndpoints.STUDENTS
-        );
-        setStudents(studentsResponse.data);
-
-        const classroomsResponse = await privateRequest.get(
-          apiEndpoints.CREATE_CLASSROOM
-        );
-        setClassrooms(classroomsResponse.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Failed to load data. Please try again later.");
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleEdit = async (id, type, updatedData) => {
+  const fetchData = async () => {
     try {
-      const endpoint =
-        type === "teachers"
-          ? apiEndpoints.EDIT_TEACHER
-          : apiEndpoints.EDIT_STUDENT;
+      const teachersResponse = await privateRequest.get(apiEndpoints.TEACHERS);
+      setTeachers(teachersResponse.data);
 
-      await privateRequest.put(`${endpoint}/${id}`, updatedData);
+      const studentsResponse = await privateRequest.get(apiEndpoints.STUDENTS);
+      setStudents(studentsResponse.data);
 
-      if (type === "teachers") {
-        setTeachers((prevTeachers) =>
-          prevTeachers.map((teacher) =>
-            teacher.id === id ? { ...teacher, ...updatedData } : teacher
-          )
-        );
-      } else if (type === "students") {
-        setStudents((prevStudents) =>
-          prevStudents.map((student) =>
-            student.id === id ? { ...student, ...updatedData } : student
-          )
-        );
-      }
-
-      toast.success(`${type.slice(0, -1).toUpperCase()} updated successfully.`);
-    } catch (error) {
-      console.error(
-        "Update failed:",
-        error.response ? error.response.data : error.message
+      const classroomsResponse = await privateRequest.get(
+        apiEndpoints.CREATE_CLASSROOM
       );
-      toast.error("Failed to update. Please try again.");
+      setClassrooms(classroomsResponse.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load data. Please try again later.");
     }
   };
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleSubmitEdit = async (event) => {
     event.preventDefault();
@@ -92,28 +53,26 @@ const PrincipalDashboard = () => {
       return;
     }
 
-    const id = selectedTeacher?.id || selectedStudent?.id;
+    const id = selectedTeacher?._id || selectedStudent?._id;
     if (!id) {
       console.error("ID is missing");
       return;
     }
 
     try {
-      const endpoint = selectedTeacher
-        ? `api/users/update/teachers/${id}`
-        : `api/users/update/students/${id}`;
-
-      const response = await fetch(endpoint, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(editData),
+      const endpoint = !selectedTeacher
+        ? `${apiEndpoints.EDIT_STUDENT}${id}`
+        : `${apiEndpoints.EDIT_TEACHER}${id}`;
+      console.log("EDITDATA:", editData);
+      const response = await privateRequest.put(endpoint, {
+        fullname: editData.fullname,
+        email: editData.email,
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to update data");
+      if (!response.status == 200) {
+        toast.error("oops something went wrong!");
       }
+      fetchData();
 
       setEditData({ fullname: "", email: "", password: "" });
       setSelectedTeacher(null);
@@ -251,227 +210,211 @@ const PrincipalDashboard = () => {
   };
 
   return (
-    <div className="p-6 min-h-screen">
-      <div className="shadow-sm border mb-4 rounded-xl flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-center text-blue-400 m-3">
+    <div className="p-6 min-h-screen bg-gray-100">
+      <div className="flex justify-between items-center bg-white p-4 shadow-lg rounded-xl mb-6">
+        <h1 className="text-4xl font-bold text-blue-600">
           Principal Dashboard
         </h1>
         <button
           onClick={handleLogout}
-          className="text-blue-500 hover:text-blue-700 p-5"
+          className="text-blue-500 hover:text-blue-700 bg-gray-200 p-3 rounded-full shadow"
         >
           <FaSignOutAlt size={25} />
         </button>
       </div>
-      <div className="mb-8 ">
-        <h2 className="text-2xl font-semibold mb-4 ">Teachers</h2>
-        <table className="w-full rounded-3xl shadow-lg p-2">
-          <thead>
-            <tr className="bg-blue-300">
-              <th className="p-3 font-semibold text-left">Name</th>
-              <th className="p-3 font-semibold text-left">Email</th>
-              <th className="p-3 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {teachers.map((teacher) => (
-              <tr key={teacher.id} className="border-t border-gray-200">
-                <td className="p-3 font-semibold">{teacher.fullname}</td>
-                <td className="p-3 font-semibold">{teacher.email}</td>
-                <td className="p-3  text-center">
-                  <button
-                    className="text-blue-500 hover:text-blue-700 mr-2"
-                    onClick={() => handleEditClick(teacher, "teachers")}
+
+      <div className="flex flex-wrap gap-6">
+        <div className="flex-1 min-w-[300px] bg-white p-4 rounded-2xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-4">Teachers</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full rounded-lg">
+              <thead>
+                <tr className="bg-blue-500 text-white">
+                  <th className="p-3 text-left rounded-tl-lg">Name</th>
+                  <th className="p-3 text-left">Email</th>
+                  <th className="p-3 text-center rounded-tr-lg">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teachers.map((teacher) => (
+                  <tr
+                    key={teacher.id}
+                    className="border-t border-gray-200 hover:bg-gray-50"
                   >
-                    <FaEdit />
-                  </button>
-                  <button
-                    className="text-red-500 hover:text-red-700"
-                    onClick={() => handleDelete(teacher.id, "teachers")}
-                  >
-                    <FaTrash />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Students</h2>
-        <table className="w-full rounded-3xl shadow-lg">
-          <thead>
-            <tr className="bg-blue-300">
-              <th className="p-3 font-semibold text-left">Name</th>
-              <th className="p-3 font-semibold text-left">Email</th>
-              <th className="p-3 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((student) => (
-              <tr key={student.id} className="border-t border-gray-200">
-                <td className="p-3 font-semibold">{student.fullname}</td>
-                <td className="p-3 font-semibold">{student.email}</td>
-                <td className="p-3 text-center">
-                  <button
-                    className="text-blue-500 hover:text-blue-700 mr-2"
-                    onClick={() => handleEditClick(student, "students")}
-                  >
-                    <FaEdit />
-                  </button>
-                  <button
-                    className="text-red-500 hover:text-red-700"
-                    onClick={() => handleDelete(student.id, "students")}
-                  >
-                    <FaTrash />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mb-8 border p-5  rounded-2xl shadow-md ">
-        <h2 className="text-2xl font-semibold  mb-4">Create Classroom</h2>
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Classroom Name"
-            value={newClassroom}
-            onChange={(e) => setNewClassroom(e.target.value)}
-            className="p-2 border shadow-sm rounded-xl"
-          />
-          <input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="p-2 border shadow-sm rounded-xl ml-2"
-          />
-          <input
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            className="p-2 border shadow-sm rounded-xl ml-2"
-          />
-          <div className="mt-4">
-            <label className="mr-4 text-md font-semibold">Select Days :</label>
-            <label className="inline-flex items-center">
-              <input
-                type="checkbox"
-                checked={days.includes("Monday")}
-                onChange={() => toggleDay("Monday")}
-                className="form-checkbox"
-              />
-              <span className="ml-2">Monday</span>
-            </label>
-            <label className="inline-flex items-center ml-4">
-              <input
-                type="checkbox"
-                checked={days.includes("Tuesday")}
-                onChange={() => toggleDay("Tuesday")}
-                className="form-checkbox"
-              />
-              <span className="ml-2">Tuesday</span>
-            </label>
-            <label className="inline-flex items-center ml-4">
-              <input
-                type="checkbox"
-                checked={days.includes("Wednesday")}
-                onChange={() => toggleDay("Wednesday")}
-                className="form-checkbox"
-              />
-              <span className="ml-2">Wednesday</span>
-            </label>
-            <label className="inline-flex items-center ml-4">
-              <input
-                type="checkbox"
-                checked={days.includes("Thursday")}
-                onChange={() => toggleDay("Thursday")}
-                className="form-checkbox"
-              />
-              <span className="ml-2">Thursday</span>
-            </label>
-            <label className="inline-flex items-center ml-4">
-              <input
-                type="checkbox"
-                checked={days.includes("Friday")}
-                onChange={() => toggleDay("Friday")}
-                className="form-checkbox"
-              />
-              <span className="ml-2">Friday</span>
-            </label>
-            <label className="inline-flex items-center ml-4">
-              <input
-                type="checkbox"
-                checked={days.includes("Saturday")}
-                onChange={() => toggleDay("Saturday")}
-                className="form-checkbox"
-              />
-              <span className="ml-2">Saturday</span>
-            </label>
-            <label className="inline-flex items-center ml-4">
-              <input
-                type="checkbox"
-                checked={days.includes("Sunday")}
-                onChange={() => toggleDay("Sunday")}
-                className="form-checkbox"
-              />
-              <span className="ml-2">Sunday</span>
-            </label>
+                    <td className="p-3">{teacher.fullname}</td>
+                    <td className="p-3">{teacher.email}</td>
+                    <td className="p-3 text-center flex justify-center">
+                      <button
+                        className="text-blue-500 hover:text-blue-700 mr-4"
+                        onClick={() => handleEditClick(teacher, "teachers")}
+                      >
+                        <FaEdit />
+                      </button>
+                      <button
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleDelete(teacher._id, "teachers")}
+                      >
+                        <FaTrash />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <button
-            onClick={handleCreateClassroom}
-            className="mt-4 bg-blue-500 text-white font-semibold  px-4 py-2 rounded-2xl shadow-md"
-          >
-            Add Classroom
-          </button>
+        </div>
+
+        <div className="flex-1 min-w-[300px] bg-white p-4 rounded-2xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-4">Students</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full rounded-lg">
+              <thead>
+                <tr className="bg-blue-500 text-white">
+                  <th className="p-3 text-left rounded-tl-lg">Name</th>
+                  <th className="p-3 text-left">Email</th>
+                  <th className="p-3 text-center rounded-tr-lg">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((student) => (
+                  <tr
+                    key={student.id}
+                    className="border-t border-gray-200 hover:bg-gray-50"
+                  >
+                    <td className="p-3">{student.fullname}</td>
+                    <td className="p-3">{student.email}</td>
+                    <td className="p-3 text-center flex justify-center">
+                      <button
+                        className="text-blue-500 hover:text-blue-700 mr-4"
+                        onClick={() => handleEditClick(student, "students")}
+                      >
+                        <FaEdit />
+                      </button>
+                      <button
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleDelete(student._id, "students")}
+                      >
+                        <FaTrash />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-      <div className="mb-8 border p-5  rounded-2xl shadow-md">
-        <h2 className="text-2xl font-semibold mb-4">
-          Assign Classroom to Teacher
-        </h2>
-        <div className="mb-4">
-          <label className="mr-2 font-semibold">Select Teacher:</label>
-          <select
-            value={selectedTeacher}
-            onChange={(e) => setSelectedTeacher(e.target.value)}
-            className="p-2 border border-gray-300 rounded"
-          >
-            <option value="">Select Teacher</option>
-            {teachers.map((teacher) => (
-              <option key={teacher.id} value={teacher.id}>
-                {teacher.fullname}
-              </option>
-            ))}
-          </select>
+
+      <div className="flex flex-wrap gap-6 mt-8">
+        <div className="flex-1 min-w-[300px] bg-white p-6 rounded-2xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-4">Create Classroom</h2>
+          <hr />
+          <div className="flex flex-col gap-4 mt-5">
+            <input
+              type="text"
+              placeholder="Classroom Name"
+              value={newClassroom}
+              onChange={(e) => setNewClassroom(e.target.value)}
+              className="p-3 border border-gray-300 rounded-lg shadow-sm w-full"
+            />
+            <div className="flex gap-4">
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="p-3 border border-gray-300 rounded-lg shadow-sm w-full"
+              />
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="p-3 border border-gray-300 rounded-lg shadow-sm w-full"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2 mt-4">
+              <label className="text-md font-semibold">Select Days:</label>
+              {[
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+              ].map((day) => (
+                <label key={day} className="inline-flex items-center ml-2">
+                  <input
+                    type="checkbox"
+                    checked={days.includes(day)}
+                    onChange={() => toggleDay(day)}
+                    className="form-checkbox"
+                  />
+                  <span className="ml-2">{day}</span>
+                </label>
+              ))}
+            </div>
+            <button
+              onClick={handleCreateClassroom}
+              className="mt-4 bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-lg hover:bg-blue-700"
+            >
+              Add Classroom
+            </button>
+          </div>
         </div>
-        <div className="mb-4">
-          <label className="mr-2 font-semibold">Select Classroom:</label>
-          <select
-            value={selectedClassroom}
-            onChange={(e) => setSelectedClassroom(e.target.value)}
-            className="p-2 border border-gray-300 rounded"
-          >
-            <option value="">Select Classroom</option>
-            {classrooms.map((classroom) => (
-              <option key={classroom._id} value={classroom._id}>
-                {classroom.name}
-              </option>
-            ))}
-          </select>
+
+        <div className="flex-1 min-w-[300px] bg-white p-6 rounded-2xl shadow-lg">
+          <h2 className="text-2xl font-semibold mb-4">
+            Assign Classroom to Teacher
+          </h2>
+          <hr />
+          <div className="flex flex-col gap-4 mt-5">
+            <div>
+              <label className="block text-md font-semibold mb-2">
+                Select Teacher:
+              </label>
+              <select
+                value={selectedTeacher}
+                onChange={(e) => setSelectedTeacher(e.target.value)}
+                className="p-3 border border-gray-300 rounded-lg shadow-sm w-full"
+              >
+                <option value="">Select Teacher</option>
+                {teachers.map((teacher) => (
+                  <option key={teacher._id} value={teacher._id}>
+                    {teacher.fullname}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-md font-semibold mb-2">
+                Select Classroom:
+              </label>
+              <select
+                value={selectedClassroom}
+                onChange={(e) => setSelectedClassroom(e.target.value)}
+                className="p-3 border border-gray-300 rounded-lg shadow-sm w-full"
+              >
+                <option value="">Select Classroom</option>
+                {classrooms.map((classroom) => (
+                  <option key={classroom._id} value={classroom._id}>
+                    {classroom.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={handleAssignClassroom}
+              className="mt-4 bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-lg hover:bg-blue-700"
+            >
+              Assign Classroom
+            </button>
+            {assignError && <p className="mt-2 text-red-500">{assignError}</p>}
+          </div>
         </div>
-        <button
-          onClick={handleAssignClassroom}
-          className="mt-4 bg-blue-500 text-white font-semibold px-4 py-2 rounded-2xl shadow-md"
-        >
-          Assign Classroom
-        </button>
-        {assignError && <p className="mt-2 text-red-500">{assignError}</p>}
       </div>
+
       {showEditForm && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-1/2">
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-gray-800 bg-opacity-75">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-1/3">
             <h3 className="text-2xl font-semibold mb-4">Edit User</h3>
             <form onSubmit={handleSubmitEdit}>
               <div className="mb-4">
@@ -485,7 +428,7 @@ const PrincipalDashboard = () => {
                   onChange={(e) =>
                     setEditData({ ...editData, fullname: e.target.value })
                   }
-                  className="w-full p-2 border border-gray-300 rounded"
+                  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm"
                   required
                 />
               </div>
@@ -500,22 +443,21 @@ const PrincipalDashboard = () => {
                   onChange={(e) =>
                     setEditData({ ...editData, email: e.target.value })
                   }
-                  className="w-full p-2 border border-gray-300 rounded"
+                  className="w-full p-3 border border-gray-300 rounded-lg shadow-sm"
                   required
                 />
               </div>
-
               <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={() => setShowEditForm(false)}
-                  className="mr-4 px-4 py-2 bg-gray-300 text-gray-700 rounded"
+                  className="mr-3 px-5 py-3 bg-gray-300 rounded-lg shadow hover:bg-gray-400"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded"
+                  className="px-5 py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700"
                 >
                   Save Changes
                 </button>
