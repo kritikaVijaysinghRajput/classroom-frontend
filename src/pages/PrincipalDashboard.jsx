@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { FaEdit, FaTrash, FaPlus } from "react-icons/fa";
+import { FaEdit, FaTrash, FaPlus, FaSignOutAlt } from "react-icons/fa";
 import { apiEndpoints } from "../constants/apiEndpoints";
+import { useNavigate } from "react-router-dom";
 import { privateRequest } from "../redux/requestMethods.js";
 import toast from "react-hot-toast";
 
@@ -21,6 +22,8 @@ const PrincipalDashboard = () => {
   const [days, setDays] = useState([]);
   const [selectedClassroom, setSelectedClassroom] = useState("");
   const [assignError, setAssignError] = useState("");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -243,12 +246,22 @@ const PrincipalDashboard = () => {
     setShowEditForm(true);
   };
 
+  const handleLogout = () => {
+    navigate("/auth/login");
+  };
+
   return (
     <div className="p-6 min-h-screen">
-      <div className=" shadow-sm border mb-4 rounded-xl ">
-        <h1 className="text-3xl  font-bold text-center text-blue-400 m-3">
+      <div className="shadow-sm border mb-4 rounded-xl flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-center text-blue-400 m-3">
           Principal Dashboard
         </h1>
+        <button
+          onClick={handleLogout}
+          className="text-blue-500 hover:text-blue-700 p-5"
+        >
+          <FaSignOutAlt size={25} />
+        </button>
       </div>
       <div className="mb-8 ">
         <h2 className="text-2xl font-semibold mb-4 ">Teachers</h2>
